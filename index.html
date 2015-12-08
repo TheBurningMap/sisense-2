@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Expires" content="Fri, Jan 01 1900 00:00:00 GMT">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Lang" content="en">
+<meta name="author" content="">
+<meta http-equiv="Reply-to" content="@.com">
+<meta name="generator" content="PhpED 6.0">
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="creation-date" content="06/01/2011">
+<meta name="revisit-after" content="15 days">
+<title>HelthCare</title>                              
+<script src="jquery-1.9.1.js"></script>
+<script src="d3.min.js"></script>
+<script src="math.js"></script>    
+<script src="highcharts.js"></script>  
+<script src="highmaps.js"></script>
+<script src="exporting.js"></script>
+<script src="us-nc-all.js"></script>
+<style>
+    #total{
+        width:1000px;
+        margin:50px auto;
+    }          
+    #top_chart{
+        width:720px;
+        margin-left:15px;
+    }    
+    #top_chart td{
+        color:#445166;
+    }
+    #top_chart h2{
+        color:#3fa5b8;
+    }
+    .top_element{
+        width:180px;
+        float:left;
+    }
+    .top_element p{
+        font-size:13px;
+    }
+    #left_side{
+        width:750px;
+        float:left;
+    }              
+    #right_side{
+        width:220px;
+        margin-left:30px;
+        float:left;
+    } 
+    #first_chart, #second_chart{
+        float:left;
+        width:750px;
+        height:300px;
+        margin-top:50px;
+    }
+    checbox{
+        float:left;
+    }     
+    #third_chart {
+        height: 500px; 
+        min-width: 310px; 
+        max-width: 800px;    
+/*        margin-top: 40px;*/
+    }
+    .loading {
+        margin-top: 10em;
+        text-align: center;
+        color: gray;
+    }
+    #second_chart rect {
+        fill: #00cee6;
+    }   
+    #second_chart text {
+        fill: white;
+        font: 10px sans-serif;
+        text-anchor: end;
+    }
+    .second{
+        float:left;
+        width:100px;
+        height:300px;
+    }       
+    td{
+        text-align:center;
+        padding:2px 2px;
+    }
+    #second_chart thead{
+        background-color:#f8f8f8;
+    }
+    #second_chart tbody{
+        background-color:#fafad2;
+    }
+    #second_chart td label{
+        display: block;
+        height: 20px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;  
+    }        
+    #second_chart td{
+        text-align:center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 2px 20px;
+    }   
+</style>                  
+<script type="text/javascript">
+    var sel_mon_cnt = 12;  
+    var mon_flag = [1,1,1,1,1,1,1,1,1,1,1,1];     
+    var Month_arr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
+    $(window).scroll(function(){
+        var scroll_pos = $(window).scrollTop();
+        $("#right_side").css("margin-top",scroll_pos+"px");
+    });
+
+    $(document).ready(function(){
+        first_chart();
+        second_chart();
+        third_chart();
+        top_chart();
+        $('.mon_check').click(function(){
+            var cur_mon = $(this).val();
+            var ind = -1;
+            for(i=0; i<12; i++){
+                if(cur_mon == Month_arr[i]){
+                    ind = i;
+                    break;
+                }
+            }
+            mon_flag[ind] = 1 - mon_flag[ind];
+            first_chart();
+            second_chart();
+            third_chart();
+            top_chart();
+        });
+        $('#select_all').click(function(){ 
+            var sel_val = parseInt($(this).val());
+            if(sel_val == 0){
+                $('#select_all').html("Unselect All");
+                for(i=0; i<12; i++){                
+                    mon_flag[i] = 1;
+                }             
+                $('.checkbox input:checkbox').each(function(){
+                    $(this).prop('checked',true);
+                });
+            }else{
+                $('#select_all').html("Select All");
+                for(i=0; i<12; i++){                
+                    mon_flag[i] = 0;
+                }             
+                $('.checkbox input:checkbox').each(function(){
+                    $(this).prop('checked',false);
+                });
+            }
+            $('#select_all').val(1-sel_val);         
+            first_chart();
+            second_chart();
+            third_chart();
+            top_chart();
+        })
+    });
+    
+    function top_chart(){                      
+        d3.csv("data.csv",function(error,data){
+            var avg_ad_cost = 0;
+            var total_cost = 0;
+            var avg_stay_days = 0;
+            var total_patient_ad = 0;
+            data.map(function(d){                           
+                var dt = d['readm_admit_dt'];
+                var dt_arr = dt.split('-');
+                var indm = -1;
+                for(i=0; i<sel_mon_cnt; i++){
+                    if(dt_arr[1] == Month_arr[i]){
+                        indm = i;
+                        break;
+                    }
+                }
+                
+                if(indm != -1 && mon_flag[indm] == 1){
+                    var readm_amount = d['readm_amount'];
+                    var Average_stay_days = d['Average stay days'];
+                    if(readm_amount == parseInt(readm_amount,10) && Average_stay_days == parseInt(Average_stay_days,10)){
+                        readm_amount = parseInt(readm_amount);                            
+                        Average_stay_days = parseInt(Average_stay_days);
+                        total_cost += readm_amount;
+                        avg_stay_days += Average_stay_days;
+                        total_patient_ad++;
+                    }
+                }                               
+            });
+            
+            if(total_patient_ad != 0){
+                avg_ad_cost = total_cost/total_patient_ad;
+                avg_stay_days /= total_patient_ad;
+                avg_ad_cost /= 1000;
+                total_cost /= 1000000;
+                avg_ad_cost = Math.round(avg_ad_cost*100)/100;
+                total_cost = Math.round(total_cost*100)/100;
+                avg_stay_days = Math.round(avg_stay_days*100)/100;     
+            }                                                             
+            
+            $('#avg_ad_cost_txt').html('$'+avg_ad_cost+"K");
+            $('#total_cost_txt').html('$'+total_cost+"M");
+            $('#avg_stay_days_txt').html(avg_stay_days);
+            $('#total_patient_ad_txt').html(total_patient_ad);
+        });
+    }
+    
+    function first_chart() {                      
+        
+        for(i=0; i<sel_mon_cnt; i++){
+            if(mon_flag[i] == 1){       
+                break;
+            }
+        }                           
+        
+        //if(i == sel_mon_cnt) {
+//            for(j=0; j<sel_mon_cnt; j++){
+//                return;
+//                mon_flag[i] = 1;
+//            }
+//        }
+                                                            
+        var readm_amount_by_month_total = [];
+        var readm_amount_by_month_avg = [];
+        var stay_days_by_month_total = [];
+        var stay_days_by_month_avg = [];
+        var readm_by_month_cnt = [];        
+        for (i = 0; i < sel_mon_cnt; i++){
+            readm_amount_by_month_total[i] = 0;
+            readm_by_month_cnt[i] = 0;
+            stay_days_by_month_total[i] = 0;
+        }
+        d3.csv("data.csv",function(error,data){
+            data.map(function(d){                                         
+                var dt = d['readm_admit_dt'];
+                var dt_arr = dt.split('-');
+                var ind = -1;
+                for(i=0; i<sel_mon_cnt; i++){
+                    if(dt_arr[1] == Month_arr[i]){
+                        ind = i;
+                        break;
+                    }
+                }                           
+                if(ind != -1){
+                    var readm_amount = d['readm_amount'];
+                    if(readm_amount == parseInt(readm_amount,10)){
+                        readm_amount_by_month_total[ind] += parseInt(readm_amount,10);
+                    }
+                    
+                    var stay_days = d['Average stay days'];
+                    if(stay_days == parseInt(stay_days,10)){
+                        stay_days_by_month_total[ind] += parseInt(stay_days,10);
+                    }
+                    
+                    readm_by_month_cnt[ind]++;
+                }                                     
+            });          
+            for (i = 0; i < sel_mon_cnt; i++){                        
+                readm_amount_by_month_total[i] /= 1000;
+                readm_amount_by_month_total[i] = Math.round(readm_amount_by_month_total[i],2);
+                readm_amount_by_month_avg[i] = readm_amount_by_month_total[i]/readm_by_month_cnt[i];
+                stay_days_by_month_avg[i] = stay_days_by_month_total[i]/readm_by_month_cnt[i];
+                stay_days_by_month_avg[i] = Math.round(stay_days_by_month_avg[i]*100,3)/100;
+            }
+            var x_arr = [];
+            var y1_arr = [];
+            var y2_arr = [];
+            for (i = 0; i < sel_mon_cnt; i++){
+                if(mon_flag[i] == 1){
+                    x_arr.push(Month_arr[i]);
+                    y1_arr.push(readm_amount_by_month_total[i]);
+                    y2_arr.push(stay_days_by_month_avg[i]);
+                }
+            }
+            $('#first_chart').highcharts({
+                chart: {
+                    zoomType: 'xy'
+                },
+                title: {
+                    text: 'TOTAL PATIENT ADMISSIONS & LENGTH OF STAY (DAYS)'
+                },
+                subtitle: {
+                    text: ''
+                },
+                xAxis: [{
+                    categories: x_arr,
+                    crosshair: true
+                }],
+                yAxis: [{ // Primary yAxis
+                    labels: {
+                        format: '{value}',
+                        style: {
+                            color: Highcharts.getOptions().colors[1]
+                        }
+                    },
+                    title: {
+                        text: '',
+                        style: {
+                            color: Highcharts.getOptions().colors[1]
+                        }
+                    }
+                }, { // Secondary yAxis
+                    title: {
+                        text: '',
+                        style: {
+                            color: Highcharts.getOptions().colors[0]
+                        }
+                    },
+                    labels: {
+                        format: '{value}K',
+                        style: {
+                            color: Highcharts.getOptions().colors[0]
+                        }
+                    },
+                    opposite: true
+                }],
+                tooltip: {
+                    shared: true
+                },
+                legend: {
+                    layout: 'vertical',
+                    align: 'left',
+                    x: 200,
+                    verticalAlign: 'top',
+                    y: 25,
+                    floating: true,
+                    backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+                },
+                series: [{
+                    name: 'Total Patient Hospital Readmission Cost',
+                    type: 'column',
+                    yAxis: 1,
+                    data: y1_arr,
+                    tooltip: {
+                        valueSuffix: 'K'
+                    }
+
+                }, {
+                    name: 'Avg Stay in Days',
+                    type: 'spline',
+                    data: y2_arr,
+                    tooltip: {
+                        valueSuffix: ''
+                    }
+                }]
+            });
+        });        
+    }
+    
+    function second_chart(){
+        d3.csv("data.csv",function(error,data){
+                                                                 
+        
+            for(i=0; i<sel_mon_cnt; i++){
+                if(mon_flag[i] == 1){       
+                    break;
+                }
+            }                         
+            
+            $('#td1').html("");
+            $('#td2').html("");
+            $('#td3').html("");       
+            $('#second_graph').html("");    
+            
+            if(i == sel_mon_cnt) {
+                return;
+                for(j=0; j<sel_mon_cnt; j++){
+                    mon_flag[i] = 1;
+                }
+            }                                       
+            
+            var readm_hsdg_desc_name_arr = [];
+            var readm_amount_total_by_name = [];
+            var readm_amount_cnt_by_name = [];
+            var stay_total_days = [];                                  
+            data.map(function(d){       
+                                            
+                var dt = d['readm_admit_dt'];
+                var dt_arr = dt.split('-');
+                var indm = -1;
+                for(i=0; i<sel_mon_cnt; i++){
+                    if(dt_arr[1] == Month_arr[i]){
+                        indm = i;
+                        break;
+                    }
+                }
+                
+                if(indm != -1 && mon_flag[indm] == 1){
+                    var readm_hsdg_desc = d['readm_hsdg_desc'];
+                    var readm_amount = d['readm_amount'];
+                    var stay_days = d['Average stay days'];
+                    if(readm_amount == parseInt(readm_amount,10) && stay_days == parseInt(stay_days,10)){
+                        readm_amount = parseInt(readm_amount);
+                        stay_days = parseInt(stay_days);
+                        var r_flag = 1;
+                        var ind = -1;
+                        for (i=0; i<readm_hsdg_desc_name_arr.length;i++){
+                            if(readm_hsdg_desc == readm_hsdg_desc_name_arr[i]){
+                                r_flag = 0;
+                                ind = i;
+                                break;
+                            }
+                        }
+                        if(r_flag == 1){
+                            readm_hsdg_desc_name_arr.push(readm_hsdg_desc);
+                            readm_amount_total_by_name.push(readm_amount);
+                            readm_amount_cnt_by_name.push(1);
+                            stay_total_days.push(stay_days);
+                        }else{
+                            readm_amount_total_by_name[ind] += readm_amount;
+                            stay_total_days[ind] += stay_days;
+                            readm_amount_cnt_by_name[ind]++;
+                        } 
+                    } 
+                }
+            });   
+            for (i=0; i<readm_amount_total_by_name.length; i++) {
+                if(readm_amount_cnt_by_name[i] != 0){
+                    readm_amount_total_by_name[i] = readm_amount_total_by_name[i] / readm_amount_cnt_by_name[i];
+                }                                                                          
+            }
+            for (i=0; i<readm_amount_total_by_name.length-1; i++){
+                for(j=i+1; j<readm_amount_total_by_name.length; j++){
+                    if(readm_amount_total_by_name[i] < readm_amount_total_by_name[j]){
+                        var tmp = readm_amount_total_by_name[i];
+                        readm_amount_total_by_name[i] = readm_amount_total_by_name[j];
+                        readm_amount_total_by_name[j] = tmp;
+                        
+                        tmp = readm_amount_cnt_by_name[i];
+                        readm_amount_cnt_by_name[i] = readm_amount_cnt_by_name[j];
+                        readm_amount_cnt_by_name[j] = tmp;
+                        
+                        tmp = readm_hsdg_desc_name_arr[i];
+                        readm_hsdg_desc_name_arr[i] = readm_hsdg_desc_name_arr[j];
+                        readm_hsdg_desc_name_arr[j] = tmp;
+                        
+                        tmp = stay_total_days[i];
+                        stay_total_days[i] = stay_total_days[j];
+                        stay_total_days[j] = tmp;
+                    }
+                }
+            }        
+            var tr4 = [];                    
+            for(i=0; i<10; i++){
+                $('#td1').append("<label>"+readm_hsdg_desc_name_arr[i]+"</label>");  
+                $('#td2').append("<label>"+readm_amount_cnt_by_name[i]+"</label>");                          
+                tr3_tmp = Math.round(readm_amount_total_by_name[i]);
+                $('#td3').append("<label>$"+tr3_tmp+"</label>");           
+                tr4_tmp = stay_total_days[i] / readm_amount_cnt_by_name[i];
+                tr4_tmp = Math.round(tr4_tmp*100)/100;
+                tr4.push(tr4_tmp);
+            }
+            var data = tr4;
+            var width = 100,
+                barHeight = 20;
+
+            var x = d3.scale.linear()
+                .domain([0, d3.max(data)])
+                .range([0, width]);
+
+            var chart = d3.select("#second_graph")
+                .attr("width", width)
+                .attr("height", barHeight * data.length);
+
+            var bar = chart.selectAll("g")
+                .data(data)
+              .enter().append("g")
+                .attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; });
+
+            bar.append("rect")
+                .attr("width", x)
+                .attr("height", barHeight - 1);
+
+            bar.append("text")
+                .attr("x", function(d) { return x(d) - 3; })
+                .attr("y", barHeight / 2)
+                .attr("dy", ".35em")
+                .text(function(d) { return d; }); 
+        });       
+    }
+    function third_chart(){
+        d3.csv("data.csv",function(error,data){   
+            
+            for(i=0; i<sel_mon_cnt; i++){
+                if(mon_flag[i] == 1){    
+                    break;
+                }
+            }           
+            
+//            if(i == sel_mon_cnt) {
+//                return;
+//                for(j=0; j<sel_mon_cnt; j++){
+//                    mon_flag[i] = 1;
+//                }
+//            }                
+                                                       
+            
+            var countrym_arr = [];
+            var risk_arr = [];
+            var countrym_cnt_arr = [];
+            data.map(function(d){           
+                var dt = d['readm_admit_dt'];
+                var dt_arr = dt.split('-');
+                var indm = -1;
+                for(i=0; i<sel_mon_cnt; i++){
+                    if(dt_arr[1] == Month_arr[i]){
+                        indm = i;   
+                        break;
+                    }
+                }
+                
+                if(indm != -1 && mon_flag[indm] == 1){                
+                    var risk = d['Risk'];
+                    var countrym = d['COUNTYNM'];
+                    if(risk == parseInt(risk)){
+                        risk = parseInt(risk);
+                        var ind = -1;
+                        
+                        for(i=0; i<countrym_arr.length; i++){
+                            if(countrym_arr[i] == countrym){
+                                ind = i;
+                                break;
+                            }
+                        } 
+                                                  
+                        if(ind == -1){
+                            countrym_cnt_arr.push(1);
+                            risk_arr.push(risk);
+                            countrym_arr.push(countrym);
+                        }else{
+                            countrym_cnt_arr[ind]++;
+                            risk_arr[ind] += risk;
+                        }
+                    }
+                }
+                                                         
+            });
+            for(i=0; i<countrym_arr.length; i++){
+                if(countrym_cnt_arr[i] != 0){
+                    risk_arr[i] = risk_arr[i]/countrym_cnt_arr[i];
+                    risk_arr[i] = Math.round(risk_arr[i]*100)/100;
+                }
+//                console.log(countrym_arr[i]+":"+risk_arr[i]);
+            }
+            
+            // Prepare demo data
+            var data = [];
+            
+            for(i=0; i<countrym_arr.length; i++){
+                data[i] = {name:countrym_arr[i],value:risk_arr[i]};
+            }
+
+            // Initiate the chart
+            $('#third_chart').highcharts('Map', {
+
+                title : {
+                    text : 'North Carolina'
+                },
+
+                subtitle : {
+                    text : 'Sort by Risk'
+                },
+
+                mapNavigation: {
+                    enabled: true,
+                    buttonOptions: {
+                        verticalAlign: 'bottom'
+                    }
+                },
+
+                colorAxis: {
+                    min: 0
+                },
+
+                series : [{
+                    data : data,
+                    mapData: Highcharts.maps['us-nc-all'],
+                    joinBy: 'name',
+                    name: 'Risk Data',
+                    states: {
+                        hover: {
+                            color: '#BADA55'
+                        }
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.name}'
+                    }
+                }]
+            });
+        });            
+    }
+</script>
+</head>
+<body>
+    <div id="total">     
+        <h1>HEALTHCARE ANALYTICS DASHBOARD</h1>        
+        <div id="left_side">
+            <div id="top_chart">
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <td>AVERAGE ADMISSION COST</td>
+                            <td>TOTAL COST</td>
+                            <td>AVERAGE STAY DAYS</td>
+                            <td>TOTAL PATIENT ADMITTED</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><h2 id="avg_ad_cost_txt">$776K</h2></td>
+                            <td><h2 id="total_cost_txt">$776K</h2></td>
+                            <td><h2 id="avg_stay_days_txt">$776K</h2></td>
+                            <td><h2 id="total_patient_ad_txt">$776K</h2></td>
+                        </tr>
+                    </tbody>
+                </table>            
+            </div>
+            <div id="first_chart"></div>               
+            <div id="second_chart">
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <td>DIAGNOSIS</td>
+                            <td># PATIENTS</td>
+                            <td>AVG COST</td>
+                            <td>AVG STAY</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="td1"></td> 
+                            <td id="td2"></td>
+                            <td id="td3"></td>
+                            <td><svg id="second_graph"></svg></td>
+                        </tr>
+                    </tbody>
+                </table>                  
+            </div>      
+            <div id="third_chart"></div>                            
+        </div>                                                                        
+        <div id="right_side">   
+            <p>ADMISSION DATE</p>                     
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Jan">Jan</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Feb">Feb</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Mar">Mar</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Apr">Apr</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="May">May</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Jun">Jun</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Jul">Jul</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Aug">Aug</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Sep">Sep</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Oct">Oct</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Nov">Nov</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" checked="checked" class="mon_check" value="Dec">Dec</label>
+            </div>                   
+            <button id="select_all" value="1" style="margin-top:5px;">Unselect All</button>      
+        </div>
+    </div>       
+</body>
+</html>
